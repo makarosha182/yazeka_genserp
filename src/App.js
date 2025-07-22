@@ -6,17 +6,27 @@ import Container from 'react-bootstrap/Container';
 import Header from './components/base/moleculas/Header';
 import MessageBubble from './components/base/moleculas/MessageBubble';
 import YazekaImageBlock from './components/templates/moleculas/YazekaImageBlock';
+import { getOpenAIResponse } from './api';
 
 function App() {
   const [inputActive, setInputActive] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (inputValue.trim()) {
-      setMessages([...messages, { text: inputValue }]);
+      const userMessage = { text: inputValue, sender: 'user' };
+      setMessages(prevMessages => [...prevMessages, userMessage]);
       setInputValue('');
-      setInputActive(false); // Switch back to default state
+      setInputActive(false);
+      setLoading(true);
+
+      const botResponse = await getOpenAIResponse(inputValue);
+      const botMessage = { text: botResponse, sender: 'bot', showImage: false };
+      
+      setMessages(prevMessages => [...prevMessages, botMessage]);
+      setLoading(false);
     }
   };
 
@@ -37,11 +47,18 @@ function App() {
       className="m-0"
     >
       <Header />
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '100%', gap: 8 }}>
-        {messages.map((msg, idx) => (
-          <MessageBubble key={idx} text={msg.text} />
-        ))}
-        <YazekaImageBlock/>
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 8 }}>
+        {messages.map((msg, idx) => {
+          if (msg.sender === 'bot') {
+            return <YazekaImageBlock key={idx} showImage={msg.showImage} text={msg.text} />;
+          }
+          return (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <MessageBubble text={msg.text} />
+            </div>
+          );
+        })}
+        {loading && <p>Yazeka is thinking...</p>}
       </div>
       <div style={{ flexGrow: 1 }} />
       <InputGroup
